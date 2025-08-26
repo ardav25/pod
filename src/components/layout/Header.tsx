@@ -24,6 +24,9 @@ export default function Header() {
             <Button variant="ghost" asChild>
               <Link href="/orders">Orders</Link>
             </Button>
+            <Button variant="ghost" asChild>
+              <Link href="/production">Production</Link>
+            </Button>
             <Avatar>
               <AvatarImage src="https://i.pravatar.cc/150?u=a042581f4e29026704d" />
               <AvatarFallback>U</AvatarFallback>
