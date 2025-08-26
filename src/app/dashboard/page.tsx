@@ -1,8 +1,24 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Header from "@/components/layout/Header";
 import { DollarSign, Package, Palette } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import { format } from "date-fns";
+import db from "@/lib/db";
 
-export default function DashboardPage() {
+async function getRecentOrders() {
+    const orders = await db.order.findMany({
+        take: 5,
+        orderBy: {
+            createdAt: 'desc',
+        },
+    });
+    return orders;
+}
+
+export default async function DashboardPage() {
+  const recentOrders = await getRecentOrders();
+
   return (
     <div className="flex flex-col w-full">
       <Header />
@@ -59,7 +75,46 @@ export default function DashboardPage() {
               <CardTitle>Recent Orders</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">The recent orders will be displayed here once the database is connected.</p>
+              {recentOrders.length > 0 ? (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Order ID</TableHead>
+                      <TableHead>Customer</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Total</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recentOrders.map((order) => (
+                      <TableRow key={order.id}>
+                        <TableCell className="font-medium">{order.id.substring(0, 7).toUpperCase()}</TableCell>
+                        <TableCell>{order.customer}</TableCell>
+                        <TableCell>{format(order.createdAt, "PPP")}</TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={
+                              order.status === 'Fulfilled' ? 'default' : 
+                              order.status === 'Processing' ? 'secondary' :
+                              order.status === 'Shipped' ? 'outline' :
+                              'destructive'
+                            }
+                            className={
+                              order.status === 'Fulfilled' ? 'bg-green-100 text-green-800 hover:bg-green-200' : ''
+                            }
+                          >
+                            {order.status}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">${order.total.toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              ) : (
+                <p className="text-muted-foreground text-center py-8">No recent orders found.</p>
+              )}
             </CardContent>
           </Card>
         </div>

@@ -1,9 +1,51 @@
 import Header from "@/components/layout/Header";
 import ProductionPlanner from "@/components/production/ProductionPlanner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { DollarSign, Package, GanttChartSquare, Users, FileText } from "lucide-react";
+import { GanttChartSquare, Users, FileText, Package } from "lucide-react";
+import db from "@/lib/db";
 
-export default function ProductionPage() {
+async function getProductionStats() {
+    const activeWorkOrders = await db.workOrder.count({
+        where: {
+            OR: [
+                { status: "Needs Production" },
+                { status: "In Progress" },
+            ]
+        }
+    });
+
+    const unitsToProduce = await db.workOrder.aggregate({
+        _sum: {
+            quantity: true,
+        },
+        where: {
+            OR: [
+                { status: "Needs Production" },
+                { status: "In Progress" },
+            ]
+        }
+    });
+
+    const subcontractingJobs = await db.workOrder.count({
+        where: {
+            subcontract: true,
+            status: {
+                notIn: ["Completed", "Canceled"],
+            }
+        }
+    });
+
+    return {
+        activeWorkOrders,
+        unitsToProduce: unitsToProduce._sum.quantity ?? 0,
+        subcontractingJobs,
+    };
+}
+
+
+export default async function ProductionPage() {
+  const stats = await getProductionStats();
+
   return (
     <div className="flex flex-col w-full">
       <Header />
@@ -22,9 +64,9 @@ export default function ProductionPage() {
               <GanttChartSquare className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">4</div>
+              <div className="text-2xl font-bold">{stats.activeWorkOrders}</div>
               <p className="text-xs text-muted-foreground">
-                2 waiting, 2 in progress
+                In production queue
               </p>
             </CardContent>
           </Card>
@@ -34,9 +76,9 @@ export default function ProductionPage() {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">9</div>
+              <div className="text-2xl font-bold">{stats.unitsToProduce}</div>
               <p className="text-xs text-muted-foreground">
-                Across 4 active orders
+                Across all active orders
               </p>
             </CardContent>
           </Card>
@@ -48,9 +90,9 @@ export default function ProductionPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">1</div>
+              <div className="text-2xl font-bold">{stats.subcontractingJobs}</div>
               <p className="text-xs text-muted-foreground">
-                Awaiting vendor confirmation
+                Awaiting vendor processing
               </p>
             </CardContent>
           </Card>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import {
   Card,
@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "../ui/button";
-import { Printer, Shirt, GanttChartSquare, FileText, Users, AlertCircle } from "lucide-react";
+import { Printer, Shirt, GanttChartSquare, FileText, Users, AlertCircle, Loader2 } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -37,76 +37,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import type { WorkOrder, Product } from "@prisma/client";
 
-// Mock Data
-const mockProductionItems = [
-  {
-    id: "wo-001",
-    orderId: "ord-12346", // From Bob Williams's order
-    product: "T-shirt Custom",
-    designId: "des-abc",
-    designPreview: "https://picsum.photos/seed/design1/100/100",
-    quantity: 1,
-    size: "L",
-    status: "Needs Production",
-    subcontract: false,
-  },
-  {
-    id: "wo-002",
-    orderId: "ord-12346", // From Bob Williams's order
-    product: "T-shirt Custom",
-    designId: "des-def",
-    designPreview: "https://picsum.photos/seed/design2/100/100",
-    quantity: 1,
-    size: "M",
-    status: "Needs Production",
-    subcontract: false,
-  },
-  {
-    id: "wo-003",
-    orderId: "ord-12347", // From Charlie Brown's order
-    product: "T-shirt Custom",
-    designId: "des-ghi",
-    designPreview: "https://picsum.photos/seed/design3/100/100",
-    quantity: 1,
-    size: "XL",
-    status: "In Progress",
-    subcontract: false,
-  },
-  {
-    id: "wo-004",
-    orderId: "ord-12345", // From Alice Johnson's order
-    product: "T-shirt Custom",
-    designId: "des-jkl",
-    designPreview: "https://picsum.photos/seed/design4/100/100",
-    quantity: 1,
-    size: "S",
-    status: "Completed",
-    subcontract: false,
-  },
-    {
-    id: "wo-005",
-    orderId: "ord-12348", // From Diana Miller's (canceled) order
-    product: "T-shirt Custom",
-    designId: "des-mno",
-    designPreview: "https://picsum.photos/seed/design5/100/100",
-    quantity: 2,
-    size: "XXL",
-    status: "Canceled",
-    subcontract: false,
-  },
-  {
-    id: "wo-006",
-    orderId: "ord-12349", // New order not on the list yet
-    product: "Topi Bordir",
-    designId: "des-hat1",
-    designPreview: "https://picsum.photos/seed/design7/100/100",
-    quantity: 10,
-    size: "One Size",
-    status: "Needs Production",
-    subcontract: true,
-  },
-];
+// Define an extended type for the client-side
+type WorkOrderItem = WorkOrder & { product: Product };
 
 type ProductionStatus =
   | "Needs Production"
@@ -123,34 +57,54 @@ const statusVariants: { [key in ProductionStatus]: { variant: "default" | "secon
 
 
 export default function ProductionPlanner() {
-  const [productionItems, setProductionItems] = useState(mockProductionItems);
+  const [workOrders, setWorkOrders] = useState<WorkOrderItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isBomOpen, setBomOpen] = useState(false);
-  const [selectedItem, setSelectedItem] = useState<(typeof mockProductionItems)[0] | null>(null);
+  const [selectedItem, setSelectedItem] = useState<WorkOrderItem | null>(null);
+
+  useEffect(() => {
+    async function fetchWorkOrders() {
+      try {
+        const res = await fetch('/api/work-orders');
+        if (!res.ok) {
+            throw new Error('Failed to fetch work orders');
+        }
+        const data = await res.json();
+        setWorkOrders(data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchWorkOrders();
+  }, []);
+
 
   const handleStatusChange = (itemId: string, newStatus: ProductionStatus) => {
-    setProductionItems((prevItems) =>
+    setWorkOrders((prevItems) =>
       prevItems.map((item) =>
         item.id === itemId ? { ...item, status: newStatus } : item
       )
     );
+    // Here you would typically also make an API call to update the status in the database
   };
 
-  const handleViewBom = (item: (typeof mockProductionItems)[0]) => {
+  const handleViewBom = (item: WorkOrderItem) => {
     setSelectedItem(item);
     setBomOpen(true);
   };
   
-  const itemsToPrint = productionItems.filter(item => item.status === 'Needs Production' || item.status === 'In Progress');
+  const itemsToPrint = workOrders.filter(item => item.status === 'Needs Production' || item.status === 'In Progress');
 
   const materialRequirements = useMemo(() => {
     const requirements: { [key: string]: { [key: string]: number } } = {};
-    const itemsForProduction = productionItems.filter(
+    const itemsForProduction = workOrders.filter(
       (item) => item.status === "Needs Production"
     );
 
     itemsForProduction.forEach((item) => {
-      // For simplicity, we use the product name as the material key
-      const materialKey = item.product.split(" ")[0] + " Blank"; // e.g. "T-shirt Blank"
+      const materialKey = item.product.name.split(" ")[0] + " Blank"; // e.g. "T-shirt Blank"
       if (!requirements[materialKey]) {
         requirements[materialKey] = {};
       }
@@ -161,14 +115,21 @@ export default function ProductionPlanner() {
     });
 
     return Object.entries(requirements);
-  }, [productionItems]);
+  }, [workOrders]);
 
   const subcontractingItems = useMemo(() => {
-    return productionItems.filter(
+    return workOrders.filter(
       (item) => item.subcontract && item.status !== "Completed" && item.status !== "Canceled"
     );
-  }, [productionItems]);
+  }, [workOrders]);
 
+  if (isLoading) {
+    return (
+        <div className="flex justify-center items-center h-64">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+    );
+  }
 
   return (
     <>
@@ -203,11 +164,11 @@ export default function ProductionPlanner() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {productionItems.map((item) => (
+                    {workOrders.map((item) => (
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">
-                          {item.id.toUpperCase()}
-                          <p className="text-xs text-muted-foreground">{item.orderId.toUpperCase()}</p>
+                          {item.id.toUpperCase().substring(0, 8)}
+                          <p className="text-xs text-muted-foreground">{item.orderId.toUpperCase().substring(0, 8)}</p>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -220,7 +181,7 @@ export default function ProductionPlanner() {
                               data-ai-hint="t-shirt design"
                             />
                             <div>
-                              <p className="font-medium">{item.product}</p>
+                              <p className="font-medium">{item.product.name}</p>
                               <p className="text-sm text-muted-foreground">Design: {item.designId}</p>
                             </div>
                           </div>
@@ -239,8 +200,8 @@ export default function ProductionPlanner() {
                             <SelectTrigger>
                               <SelectValue asChild>
                                 <Badge 
-                                  variant={statusVariants[item.status].variant}
-                                  className={`${statusVariants[item.status].className} hover:bg-opacity-80 w-full justify-start`}
+                                  variant={statusVariants[item.status as ProductionStatus].variant}
+                                  className={`${statusVariants[item.status as ProductionStatus].className} hover:bg-opacity-80 w-full justify-start`}
                                 >
                                   {item.status}
                                 </Badge>
@@ -320,8 +281,8 @@ export default function ProductionPlanner() {
                   {subcontractingItems.map(item => (
                     <div key={item.id} className="flex justify-between items-center p-2 rounded-md bg-muted/50">
                       <div>
-                        <p className="font-semibold">{item.product}</p>
-                        <p className="text-sm text-muted-foreground">{item.id.toUpperCase()} - {item.quantity} units</p>
+                        <p className="font-semibold">{item.product.name}</p>
+                        <p className="text-sm text-muted-foreground">{item.id.toUpperCase().substring(0,8)} - {item.quantity} units</p>
                       </div>
                       <Button size="sm">Create PO</Button>
                     </div>
@@ -339,9 +300,9 @@ export default function ProductionPlanner() {
       <AlertDialog open={isBomOpen} onOpenChange={setBomOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Bill of Materials (BOM) for {selectedItem?.id.toUpperCase()}</AlertDialogTitle>
+            <AlertDialogTitle>Bill of Materials (BOM) for {selectedItem?.id.toUpperCase().substring(0,8)}</AlertDialogTitle>
             <AlertDialogDescription>
-              This is a simplified Bill of Materials for producing {selectedItem?.quantity} unit(s) of {selectedItem?.product} ({selectedItem?.size}).
+              This is a simplified Bill of Materials for producing {selectedItem?.quantity} unit(s) of {selectedItem?.product.name} ({selectedItem?.size}).
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div>
@@ -355,7 +316,7 @@ export default function ProductionPlanner() {
               </TableHeader>
               <TableBody>
                 <TableRow>
-                  <TableCell className="font-medium">{selectedItem?.product} Blank ({selectedItem?.size})</TableCell>
+                  <TableCell className="font-medium">{selectedItem?.product.name} Blank ({selectedItem?.size})</TableCell>
                   <TableCell>Raw Material</TableCell>
                   <TableCell className="text-right">{selectedItem?.quantity}</TableCell>
                 </TableRow>
