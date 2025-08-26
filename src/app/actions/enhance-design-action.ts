@@ -5,6 +5,7 @@ import { z } from "zod";
 
 const enhanceDesignSchema = z.object({
   designDataUri: z.string(),
+  prompt: z.string().optional(),
 });
 
 type Result = {
@@ -28,6 +29,7 @@ export async function enhanceDesignAction(
   try {
     const result = await enhanceDesign({
       designDataUri: validatedFields.data.designDataUri,
+      prompt: validatedFields.data.prompt,
     });
     return { success: true, data: result };
   } catch (e) {

@@ -1,4 +1,3 @@
-// This is an AI-powered tool that enhances uploaded designs by upscaling resolution, optimizing colors for printing, and suggesting potential layout improvements.
 'use server';
 /**
  * @fileOverview AI Design Enhancement flow.
@@ -13,14 +12,17 @@
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
-import wav from 'wav';
 
 const EnhanceDesignInputSchema = z.object({
   designDataUri: z
     .string()
     .describe(
-      'The design file as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.' // Correct the typo here
+      "A photo of a design, as a data URI that must include a MIME type and use Base64 encoding. Expected format: 'data:<mimetype>;base64,<encoded_data>'."
     ),
+  prompt: z
+    .string()
+    .optional()
+    .describe('An optional user prompt to guide the design enhancement.'),
 });
 export type EnhanceDesignInput = z.infer<typeof EnhanceDesignInputSchema>;
 
@@ -30,7 +32,9 @@ const EnhanceDesignOutputSchema = z.object({
     .describe(
       'The enhanced design file as a data URI that must include a MIME type and use Base64 encoding. Expected format: \'data:<mimetype>;base64,<encoded_data>\'.'
     ),
-  suggestions: z.array(z.string()).describe('An array of suggestions for layout improvements.'),
+  suggestions: z
+    .array(z.string())
+    .describe('An array of suggestions for layout improvements.'),
 });
 export type EnhanceDesignOutput = z.infer<typeof EnhanceDesignOutputSchema>;
 
@@ -38,23 +42,25 @@ export async function enhanceDesign(input: EnhanceDesignInput): Promise<EnhanceD
   return enhanceDesignFlow(input);
 }
 
-const enhanceDesignPrompt = ai.definePrompt({
-  name: 'enhanceDesignPrompt',
-  input: {schema: EnhanceDesignInputSchema},
-  output: {schema: EnhanceDesignOutputSchema},
-  prompt: `You are an AI design enhancement tool. You will receive a design file and enhance it by:
-- Upscaling the resolution to at least 300 DPI for high-quality printing.
-- Optimizing the colors for printing, ensuring they are vibrant and accurate.
-- Suggesting potential layout improvements to make the design more visually appealing and effective for print-on-demand products.
+const suggestionsPrompt = ai.definePrompt({
+  name: 'suggestionsPrompt',
+  input: {
+    schema: z.object({
+      designDataUri: z.string(),
+    }),
+  },
+  output: {
+    schema: z.object({
+      suggestions: z
+        .array(z.string())
+        .describe(
+          'An array of 3-5 concise, actionable suggestions for improving the design for a t-shirt. The suggestions should be creative and practical. For example: "Add a vintage texture to the design for a retro feel."'
+        ),
+    }),
+  },
+  prompt: `You are an expert print-on-demand design critic. Analyze the following design and provide 3-5 concise, actionable suggestions for how to improve it for a t-shirt print.
 
-Original Design: {{media url=designDataUri}}
-
-Please provide the enhanced design as a data URI and a list of layout improvement suggestions.
-
-Output the enhanced design and suggestions in the following format:
-Enhanced Design: <enhanced_design_data_uri>
-Suggestions: [<suggestion1>, <suggestion2>, ...]
-`,
+Design: {{media url=designDataUri}}`,
 });
 
 const enhanceDesignFlow = ai.defineFlow(
@@ -64,27 +70,42 @@ const enhanceDesignFlow = ai.defineFlow(
     outputSchema: EnhanceDesignOutputSchema,
   },
   async input => {
-    // Call the image generation model to enhance the design.
-    const {media} = await ai.generate({
+    // 1. Generate suggestions based on the original image
+    const suggestionPromise = suggestionsPrompt({
+      designDataUri: input.designDataUri,
+    });
+
+    // 2. Generate the enhanced image
+    const imageEnhancementPrompt = [
+      {media: {url: input.designDataUri}},
+      {
+        text:
+          input.prompt ||
+          'Subtly enhance this image for a high-quality t-shirt print. Improve resolution and color vibrancy, but keep the core design elements the same. Do not add new elements unless asked.',
+      },
+    ];
+
+    const imagePromise = ai.generate({
       model: 'googleai/gemini-2.0-flash-preview-image-generation',
-      prompt: [
-        {
-          media: {url: input.designDataUri},
-        },
-        {text: 'Enhance this image for print.'},
-      ],
+      prompt: imageEnhancementPrompt,
       config: {
-        responseModalities: ['TEXT', 'IMAGE'], // MUST provide both TEXT and IMAGE, IMAGE only won't work
+        responseModalities: ['TEXT', 'IMAGE'],
       },
     });
 
-    const {output} = await enhanceDesignPrompt({
-      designDataUri: media?.url ?? input.designDataUri, // Use the enhanced image if available
-    });
+    // Await both promises in parallel
+    const [suggestionResponse, imageResponse] = await Promise.all([
+      suggestionPromise,
+      imagePromise,
+    ]);
+
+    const suggestions = suggestionResponse.output?.suggestions ?? [];
+    const enhancedDesignDataUri =
+      imageResponse.media?.url ?? input.designDataUri;
 
     return {
-      enhancedDesignDataUri: media?.url ?? input.designDataUri,
-      suggestions: output?.suggestions ?? [],
+      enhancedDesignDataUri,
+      suggestions,
     };
   }
 );
