@@ -2,47 +2,21 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import Header from "@/components/layout/Header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import db from "@/lib/db";
+import { format } from "date-fns";
 
-const orders = [
-  {
-    id: "ORD001",
-    customer: "Liam Johnson",
-    date: "2023-10-23",
-    status: "Fulfilled",
-    total: "$250.00",
-  },
-  {
-    id: "ORD002",
-    customer: "Olivia Smith",
-    date: "2023-10-24",
-    status: "Processing",
-    total: "$150.00",
-  },
-  {
-    id: "ORD003",
-    customer: "Noah Williams",
-    date: "2023-10-25",
-    status: "Fulfilled",
-    total: "$350.00",
-  },
-    {
-    id: "ORD004",
-    customer: "Emma Brown",
-    date: "2023-10-26",
-    status: "Shipped",
-    total: "$450.00",
-  },
-    {
-    id: "ORD005",
-    customer: "Ava Jones",
-    date: "2023-10-27",
-    status: "Pending",
-    total: "$550.00",
-  },
-];
+async function getOrders() {
+  const orders = await db.order.findMany({
+    orderBy: {
+      createdAt: 'desc',
+    }
+  });
+  return orders;
+}
 
+export default async function OrdersPage() {
+  const orders = await getOrders();
 
-export default function OrdersPage() {
   return (
     <div className="flex flex-col w-full">
       <Header />
@@ -53,42 +27,46 @@ export default function OrdersPage() {
             <CardDescription>A list of your recent orders.</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Order</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Total</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {orders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell className="font-medium">{order.id}</TableCell>
-                    <TableCell>{order.customer}</TableCell>
-                    <TableCell>{order.date}</TableCell>
-                    <TableCell>
-                      <Badge 
-                        variant={
-                          order.status === 'Fulfilled' ? 'default' : 
-                          order.status === 'Processing' ? 'secondary' :
-                          order.status === 'Shipped' ? 'outline' :
-                          'destructive'
-                        }
-                        className={
-                          order.status === 'Fulfilled' ? 'bg-green-100 text-green-800' : ''
-                        }
-                      >
-                        {order.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">{order.total}</TableCell>
+            {orders.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Order ID</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {orders.map((order) => (
+                    <TableRow key={order.id}>
+                      <TableCell className="font-medium">{order.id.substring(0, 7).toUpperCase()}</TableCell>
+                      <TableCell>{order.customer}</TableCell>
+                      <TableCell>{format(order.createdAt, "PPP")}</TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={
+                            order.status === 'Fulfilled' ? 'default' : 
+                            order.status === 'Processing' ? 'secondary' :
+                            order.status === 'Shipped' ? 'outline' :
+                            'destructive'
+                          }
+                          className={
+                            order.status === 'Fulfilled' ? 'bg-green-100 text-green-800 hover:bg-green-200' : ''
+                          }
+                        >
+                          {order.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">${order.total.toFixed(2)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <p className="text-muted-foreground text-center py-8">No orders found.</p>
+            )}
           </CardContent>
         </Card>
       </main>
