@@ -1,16 +1,16 @@
 import {
-  mysqlTable,
+  pgTable,
   serial,
   varchar,
   timestamp,
   decimal,
-  int,
+  integer,
   text,
   boolean,
-} from "drizzle-orm/mysql-core";
+} from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 
-export const orders = mysqlTable("printstream_orders", {
+export const orders = pgTable("printstream_orders", {
   id: serial("id").primaryKey(),
   customerName: varchar("customer_name", { length: 255 }),
   status: varchar("status", { length: 50 }).default("Pending").notNull(),
@@ -18,23 +18,23 @@ export const orders = mysqlTable("printstream_orders", {
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
-export const orderItems = mysqlTable("printstream_order_items", {
+export const orderItems = pgTable("printstream_order_items", {
   id: serial("id").primaryKey(),
-  orderId: int("order_id").notNull(),
+  orderId: integer("order_id").notNull(),
   productId: varchar("product_id", { length: 100 }).notNull(),
   color: varchar("color", { length: 50 }),
   size: varchar("size", { length: 50 }),
-  quantity: int("quantity").notNull(),
+  quantity: integer("quantity").notNull(),
 });
 
-export const workOrders = mysqlTable("printstream_work_orders", {
+export const workOrders = pgTable("printstream_work_orders", {
   id: serial("id").primaryKey(),
-  orderId: int("order_id").notNull(),
+  orderId: integer("order_id").notNull(),
   productName: varchar("product_name", { length: 255 }).notNull(),
   productColor: varchar("product_color", { length: 50 }),
   productSize: varchar("product_size", { length: 50 }),
   designDataUri: text("design_data_uri"),
-  quantity: int("quantity").notNull(),
+  quantity: integer("quantity").notNull(),
   status: varchar("status", { length: 50 }).default("Needs Production").notNull(),
   isSubcontract: boolean("is_subcontract").default(false).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
