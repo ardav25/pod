@@ -1,21 +1,18 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
-  provider = "prisma-client-js"
-  engineType = "binary"
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
 }
 
 datasource db {
-  provider = "mysql"
-  url      = env("DATABASE_URL")
+  provider = "sqlite"
+  url      = "file:./dev.db"
 }
 
 model Order {
   id        String   @id @default(cuid())
   customer  String
-  total     Float
   status    String
+  total     Float
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
