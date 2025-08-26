@@ -81,7 +81,7 @@ const enhanceDesignFlow = ai.defineFlow(
       {
         text:
           input.prompt ||
-          'Enhance this image for a high-quality t-shirt print. Increase resolution to 300 DPI, ensure clean lines, and make colors vibrant for direct-to-garment printing. Keep the original art style and subject matter. Do not add any new elements unless specifically asked. The output should be a clean image with a transparent background.',
+          'Enhance this image for a high-quality t-shirt print. Increase resolution to 300 DPI, ensure clean lines, and make colors vibrant for direct-to-garment printing. Keep the original art style and subject matter. Do not add any new elements unless specifically asked. The output MUST be a clean image with a transparent background.',
       },
     ];
 

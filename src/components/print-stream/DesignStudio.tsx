@@ -101,15 +101,14 @@ export default function DesignStudio() {
     }
     startTransition(() => {
       setError(null);
-      // Keep old suggestions visible while generating new ones
       enhanceDesignAction({ designDataUri: design, prompt }).then((result) => {
         if (result.success && result.data) {
           setEnhancedDesign(result.data.enhancedDesignDataUri);
           setDisplayedDesign(result.data.enhancedDesignDataUri);
           setAiSuggestions(result.data.suggestions);
           toast({
-            title: "Desain Ditingkatkan",
-            description: "Desain Anda telah berhasil ditingkatkan oleh AI.",
+            title: "Desain Berhasil Ditingkatkan",
+            description: "Desain Anda telah berhasil disempurnakan oleh AI.",
           });
         } else {
           setError(result.error || "Terjadi kesalahan yang tidak diketahui.");
@@ -171,7 +170,7 @@ export default function DesignStudio() {
             <div className="space-y-2">
               <Label htmlFor="design-upload">
                 <Upload className="inline-block mr-2 h-4 w-4" />
-                Unggah Desain
+                Unggah Desain Anda
               </Label>
               <Input
                 id="design-upload"
@@ -181,11 +180,11 @@ export default function DesignStudio() {
                 accept="image/png, image/jpeg, image/svg+xml"
                 className="file:text-primary file:font-semibold"
               />
-              {design && !enhancedDesign && (
+              {design && (
                 <div className="p-2 border rounded-md mt-2 w-fit bg-slate-50">
                   <Image
                     src={design}
-                    alt="Pratinjau Desain"
+                    alt="Pratinjau Desain Asli"
                     width={80}
                     height={80}
                     className="rounded-md object-contain"
@@ -201,7 +200,7 @@ export default function DesignStudio() {
               <div className="space-y-2">
                 <Label htmlFor="color-select">
                   <Palette className="inline-block mr-2 h-4 w-4" />
-                  Warna
+                  Warna Kaus
                 </Label>
                 <Select value={currentColor} onValueChange={setCurrentColor}>
                   <SelectTrigger id="color-select">
@@ -237,7 +236,7 @@ export default function DesignStudio() {
             <Separator />
 
             <div className="space-y-4">
-              <h3 className="font-semibold text-md">Alat AI</h3>
+              <h3 className="font-semibold text-md">Penyempurnaan AI</h3>
                <Button
                 onClick={() => handleEnhanceDesign()}
                 disabled={isPending || !design}
@@ -248,7 +247,7 @@ export default function DesignStudio() {
                 ) : (
                   <Sparkles className="mr-2 h-4 w-4" />
                 )}
-                Tingkatkan dengan AI
+                Tingkatkan Kualitas (AI)
               </Button>
 
               {error && (
@@ -260,7 +259,7 @@ export default function DesignStudio() {
               )}
               
                <div className="space-y-2">
-                  <Label htmlFor="custom-prompt">Atau, coba prompt Anda sendiri:</Label>
+                  <Label htmlFor="custom-prompt">Atau, coba prompt kustom Anda:</Label>
                   <Textarea
                     id="custom-prompt"
                     placeholder="misalnya, 'jadikan terlihat seperti kartun tahun 90-an'"
@@ -269,7 +268,7 @@ export default function DesignStudio() {
                     disabled={isPending || !design}
                   />
                   <Button onClick={handleCustomPromptEnhance} disabled={isPending || !design || !customPrompt} className="w-full">
-                    Tingkatkan dengan Prompt Kustom
+                    Sempurnakan dengan Prompt
                   </Button>
                 </div>
 
@@ -283,9 +282,9 @@ export default function DesignStudio() {
               {!isPending && aiSuggestions.length > 0 && (
                 <Alert>
                   <Info className="h-4 w-4" />
-                  <AlertTitle>Saran AI</AlertTitle>
+                  <AlertTitle>Saran Peningkatan dari AI</AlertTitle>
                   <AlertDescription>
-                    <p className="mb-3">Klik saran untuk menerapkannya:</p>
+                    <p className="mb-3">Klik salah satu saran di bawah untuk menerapkannya:</p>
                     <div className="flex flex-col space-y-2">
                       {aiSuggestions.map((suggestion, index) => (
                         <Button
@@ -353,13 +352,12 @@ export default function DesignStudio() {
                 )}
               </div>
               <div className="mt-4 flex items-center gap-2">
-              {enhancedDesign && (
+              {enhancedDesign ? (
                 <Badge className="bg-green-100 text-green-800 border-green-300 hover:bg-green-200 dark:bg-green-900/50 dark:text-green-200 dark:border-green-700">
                   <CheckCircle className="h-4 w-4 mr-1"/>
                   Ditingkatkan AI
                 </Badge>
-              )}
-               {design && !enhancedDesign && (
+              ) : design && (
                  <Badge variant="secondary">
                    Desain Asli
                  </Badge>
