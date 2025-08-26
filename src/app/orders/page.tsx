@@ -6,15 +6,14 @@ import Header from "@/components/layout/Header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
-import { collection, onSnapshot, orderBy, query, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 
-// Define the Order type matching the Firestore data structure
+// This type should match the structure of the data returned by your API
+// and align with the Prisma Order model.
 interface Order {
   id: string;
-  customerName: string;
-  createdAt: Timestamp;
-  status: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Canceled';
+  customerName: string | null;
+  createdAt: string; // Dates are often serialized as strings in JSON
+  status: string;
   total: number;
 }
 
@@ -23,33 +22,27 @@ export default function OrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
-    
-    // Use onSnapshot for real-time updates
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const ordersData: Order[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        ordersData.push({
-          id: doc.id,
-          customerName: data.customerName || `Customer #${doc.id.substring(0, 5)}`,
-          createdAt: data.createdAt,
-          status: data.status || 'Pending',
-          total: data.price || 0,
-        });
-      });
-      setOrders(ordersData);
-      setIsLoading(false);
-    }, (error) => {
-      console.error("Error fetching orders: ", error);
-      setIsLoading(false);
-    });
+    async function fetchOrders() {
+      setIsLoading(true);
+      try {
+        const response = await fetch('/api/orders');
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        const data: Order[] = await response.json();
+        setOrders(data);
+      } catch (error) {
+        console.error("Error fetching orders: ", error);
+        // Handle the error appropriately in the UI
+      } finally {
+        setIsLoading(false);
+      }
+    }
 
-    // Clean up the listener on component unmount
-    return () => unsubscribe();
+    fetchOrders();
   }, []);
 
-  const getStatusVariant = (status: Order['status']) => {
+  const getStatusVariant = (status: string) => {
     switch (status) {
       case 'Pending':
         return 'secondary';
@@ -73,7 +66,7 @@ export default function OrdersPage() {
         <Card>
           <CardHeader>
             <CardTitle>Orders</CardTitle>
-            <CardDescription>A real-time list of your recent orders.</CardDescription>
+            <CardDescription>A list of all customer orders.</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -95,8 +88,8 @@ export default function OrdersPage() {
                   {orders.map((order) => (
                     <TableRow key={order.id}>
                       <TableCell className="font-medium">#{order.id.substring(0, 7)}</TableCell>
-                      <TableCell>{order.customerName}</TableCell>
-                      <TableCell>{order.createdAt.toDate().toLocaleDateString()}</TableCell>
+                      <TableCell>{order.customerName || `Customer #${order.id.substring(0, 5)}`}</TableCell>
+                      <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <Badge variant={getStatusVariant(order.status)}>
                           {order.status}

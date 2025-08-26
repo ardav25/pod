@@ -5,21 +5,20 @@ import { DollarSign, Package, Palette, Loader2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
-import { collection, query, orderBy, limit, onSnapshot, Timestamp } from "firebase/firestore";
-import { db } from "@/lib/firebase";
 
+// Assuming a type definition for Order based on your Prisma schema
 interface Order {
   id: string;
-  customerName: string;
-  createdAt: Timestamp;
-  status: 'Pending' | 'Processing' | 'Shipped' | 'Delivered' | 'Canceled';
+  customerName: string | null;
+  createdAt: Date;
+  status: string;
   total: number;
 }
 
 interface DashboardStats {
     totalRevenue: number;
     orderCount: number;
-    designCount: number;
+    designCount: number; // Placeholder
 }
 
 export default function DashboardPage() {
@@ -28,41 +27,44 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Listener for recent orders
-    const ordersQuery = query(collection(db, "orders"), orderBy("createdAt", "desc"), limit(5));
-    const unsubscribeOrders = onSnapshot(ordersQuery, (snapshot) => {
-      const ordersData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        customerName: doc.data().customerName || `Customer #${doc.id.substring(0, 5)}`,
-        createdAt: doc.data().createdAt,
-        status: doc.data().status || 'Pending',
-        total: doc.data().price || 0,
-      }));
-      setRecentOrders(ordersData);
-    });
+    async function fetchData() {
+      setIsLoading(true);
+      try {
+        // In a real app, you might have separate API endpoints for stats and recent orders.
+        // Here, we fetch all orders and process them on the client.
+        const response = await fetch('/api/orders');
+        if (!response.ok) {
+          throw new Error('Failed to fetch data');
+        }
+        const allOrders: Order[] = await response.json();
 
-    // Listener for all orders to calculate stats
-    const allOrdersQuery = query(collection(db, "orders"));
-    const unsubscribeStats = onSnapshot(allOrdersQuery, (snapshot) => {
+        // Sort by date and take the last 5 for "Recent Orders"
+        const sortedOrders = allOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setRecentOrders(sortedOrders.slice(0, 5));
+
+        // Calculate stats
         let totalRevenue = 0;
-        snapshot.forEach(doc => {
-            totalRevenue += doc.data().price || 0;
+        sortedOrders.forEach(order => {
+            totalRevenue += order.total;
         });
+
         setStats({
             totalRevenue: totalRevenue,
-            orderCount: snapshot.size,
-            designCount: 0, // We need a 'designs' collection for this
+            orderCount: sortedOrders.length,
+            designCount: 0, // Placeholder
         });
-        setIsLoading(false);
-    });
 
-    return () => {
-      unsubscribeOrders();
-      unsubscribeStats();
-    };
+      } catch (error) {
+        console.error("Failed to fetch dashboard data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchData();
   }, []);
 
-  const getStatusVariant = (status: Order['status']) => {
+  const getStatusVariant = (status: string) => {
     switch (status) {
       case 'Pending': return 'secondary';
       case 'Processing': return 'default';
@@ -155,7 +157,7 @@ export default function DashboardPage() {
                          <TableRow key={order.id}>
                             <TableCell className="font-medium">#{order.id.substring(0, 7)}</TableCell>
                             <TableCell>{order.customerName}</TableCell>
-                            <TableCell>{order.createdAt.toDate().toLocaleDateString()}</TableCell>
+                            <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
                             <TableCell>
                                <Badge variant={getStatusVariant(order.status)}>
                                  {order.status}

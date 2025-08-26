@@ -37,8 +37,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { db } from "@/lib/firebase";
-import { collection, onSnapshot, query, where, doc, updateDoc, Timestamp } from "firebase/firestore";
+import db from "@/lib/db"; // Assuming this will be used for status updates eventually via server actions
 
 type ProductionStatus =
   | "Needs Production"
@@ -47,18 +46,17 @@ type ProductionStatus =
   | "Canceled"
   | "Subcontracted";
 
+// This type must match the data structure returned by the /api/work-orders endpoint
 interface WorkOrderItem {
   id: string;
   orderId: string;
-  product: {
-    name: string;
-    color: string;
-    size: string;
-  };
+  productName: string;
+  productColor: string;
+  productSize: string;
   designDataUri: string;
   quantity: number;
   status: ProductionStatus;
-  createdAt: Timestamp;
+  createdAt: string; // Dates are serialized as strings
   isSubcontract: boolean;
 }
 
@@ -70,7 +68,6 @@ const statusVariants: { [key in ProductionStatus]: { variant: "default" | "secon
   "Subcontracted": { variant: "default", className: 'bg-purple-100 text-purple-800' },
 };
 
-
 export default function ProductionPlanner() {
   const [workOrders, setWorkOrders] = useState<WorkOrderItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -78,41 +75,33 @@ export default function ProductionPlanner() {
   const [selectedItem, setSelectedItem] = useState<WorkOrderItem | null>(null);
 
   useEffect(() => {
-    const q = query(collection(db, "work-orders"));
-    
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      const woData: WorkOrderItem[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        woData.push({
-          id: doc.id,
-          orderId: data.orderId,
-          product: data.product || { name: 'T-Shirt', color: data.color, size: data.size },
-          designDataUri: data.designDataUri,
-          quantity: data.quantity || 1,
-          status: data.status,
-          createdAt: data.createdAt,
-          isSubcontract: data.isSubcontract || false
-        });
-      });
-      setWorkOrders(woData.sort((a, b) => b.createdAt.toMillis() - a.createdAt.toMillis()));
-      setIsLoading(false);
-    }, (error) => {
-      console.error("Error fetching work orders:", error);
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
+    async function fetchWorkOrders() {
+      setIsLoading(true);
+      try {
+        const response = await fetch('/api/work-orders');
+        if (!response.ok) {
+          throw new Error('Failed to fetch work orders');
+        }
+        const data: WorkOrderItem[] = await response.json();
+        // Sort by creation date, descending
+        data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        setWorkOrders(data);
+      } catch (error) {
+        console.error("Error fetching work orders:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    fetchWorkOrders();
   }, []);
 
 
   const handleStatusChange = async (itemId: string, newStatus: ProductionStatus) => {
-    const woRef = doc(db, "work-orders", itemId);
-    try {
-      await updateDoc(woRef, { status: newStatus });
-    } catch (error) {
-      console.error("Failed to update status:", error);
-    }
+    // This needs to be implemented, likely via a server action or a PUT request to an API endpoint
+    console.log(`Updating item ${itemId} to status ${newStatus}`);
+    // Optimistically update the UI
+    setWorkOrders(workOrders.map(wo => wo.id === itemId ? { ...wo, status: newStatus } : wo));
+    // Example: await updateWorkOrderStatus(itemId, newStatus);
   };
 
   const handleViewBom = (item: WorkOrderItem) => {
@@ -128,7 +117,7 @@ export default function ProductionPlanner() {
     );
     const reqs: { [key: string]: number } = {};
     itemsForProduction.forEach(item => {
-      const key = `${item.product.name} - ${item.product.color}`;
+      const key = `${item.productName} - ${item.productColor}`;
       if (!reqs[key]) {
         reqs[key] = 0;
       }
@@ -196,8 +185,8 @@ export default function ProductionPlanner() {
                                     className="rounded-md bg-white object-contain p-1 border"
                                 />
                                 <div>
-                                    <div className="font-medium">{item.product.name}</div>
-                                    <div className="text-sm text-muted-foreground">{item.product.color}, {item.product.size}</div>
+                                    <div className="font-medium">{item.productName}</div>
+                                    <div className="text-sm text-muted-foreground">{item.productColor}, {item.productSize}</div>
                                 </div>
                             </div>
                           </TableCell>
@@ -282,7 +271,7 @@ export default function ProductionPlanner() {
                     <div key={item.id} className="flex items-center justify-between">
                        <div>
                          <p className="text-sm font-medium">WO-#{item.id.substring(0,7)}</p>
-                         <p className="text-xs text-muted-foreground">{item.product.name} ({item.product.color})</p>
+                         <p className="text-xs text-muted-foreground">{item.productName} ({item.productColor})</p>
                        </div>
                        <Button size="sm">Create PO</Button>
                     </div>
@@ -319,7 +308,7 @@ export default function ProductionPlanner() {
                 {selectedItem && (
                   <>
                     <TableRow>
-                      <TableCell>{selectedItem.product.name} ({selectedItem.product.color}, {selectedItem.product.size})</TableCell>
+                      <TableCell>{selectedItem.productName} ({selectedItem.productColor}, {selectedItem.productSize})</TableCell>
                       <TableCell>Garment</TableCell>
                       <TableCell className="text-right">{selectedItem.quantity}</TableCell>
                     </TableRow>

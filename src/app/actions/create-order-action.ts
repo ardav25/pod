@@ -1,8 +1,7 @@
 "use server";
 
 import { z } from "zod";
-import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import db from "@/lib/db";
 
 const createOrderSchema = z.object({
   productId: z.string(),
@@ -40,35 +39,51 @@ export async function createOrderAction(
   try {
     const { productId, designDataUri, color, size, price } = validatedFields.data;
     
-    // 1. Create the Order document
-    const orderRef = await addDoc(collection(db, "orders"), {
-      customerName: "Demo Customer", // In a real app, this would come from auth
-      createdAt: serverTimestamp(),
-      status: "Pending",
-      price: price,
-      items: [{ productId, color, size, quantity: 1 }],
+    // Using a transaction to ensure both order and work order are created
+    const newOrder = await db.$transaction(async (prisma) => {
+        // 1. Create the Order document
+        const order = await prisma.order.create({
+            data: {
+                customerName: "Demo Customer", // In a real app, this would come from auth
+                status: "Pending",
+                total: price,
+                items: {
+                    create: {
+                        productId: productId,
+                        color: color,
+                        size: size,
+                        quantity: 1,
+                    }
+                }
+            },
+            include: {
+                items: true,
+            }
+        });
+
+        console.log("Order created with ID: ", order.id);
+
+        // 2. Create the corresponding Work Order document
+        const workOrder = await prisma.workOrder.create({
+            data: {
+                orderId: order.id,
+                productName: "T-Shirt",
+                productColor: color,
+                productSize: size,
+                designDataUri: designDataUri,
+                quantity: 1, // For simplicity, each order is for 1 item
+                status: "Needs Production",
+                isSubcontract: needsSubcontracting(color, size),
+            }
+        });
+
+        console.log("Work Order created with ID: ", workOrder.id);
+        
+        return order;
     });
 
-    console.log("Order created with ID: ", orderRef.id);
-    
-    // 2. Create the corresponding Work Order document
-    const workOrderRef = await addDoc(collection(db, "work-orders"), {
-        orderId: orderRef.id,
-        createdAt: serverTimestamp(),
-        product: {
-            name: "T-Shirt",
-            color: color,
-            size: size
-        },
-        designDataUri: designDataUri,
-        quantity: 1, // For simplicity, each order is for 1 item
-        status: "Needs Production",
-        isSubcontract: needsSubcontracting(color, size),
-    });
 
-    console.log("Work Order created with ID: ", workOrderRef.id);
-
-    return { success: true, orderId: orderRef.id };
+    return { success: true, orderId: newOrder.id };
 
   } catch (e) {
     console.error("Error creating order: ", e);
