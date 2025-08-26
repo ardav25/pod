@@ -2,16 +2,44 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import Header from "@/components/layout/Header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import db from "@/lib/db";
 import { format } from "date-fns";
 
+const mockOrders = [
+  {
+    id: 'ord-12345',
+    customer: 'Alice Johnson',
+    createdAt: new Date(),
+    status: 'Fulfilled',
+    total: 22.5,
+  },
+  {
+    id: 'ord-12346',
+    customer: 'Bob Williams',
+    createdAt: new Date(new Date().setDate(new Date().getDate() - 1)),
+    status: 'Processing',
+    total: 45.0,
+  },
+  {
+    id: 'ord-12347',
+    customer: 'Charlie Brown',
+    createdAt: new Date(new Date().setDate(new Date().getDate() - 2)),
+    status: 'Shipped',
+    total: 18.75,
+  },
+  {
+    id: 'ord-12348',
+    customer: 'Diana Miller',
+    createdAt: new Date(new Date().setDate(new Date().getDate() - 3)),
+    status: 'Canceled',
+    total: 50.2,
+  },
+];
+
+
 async function getOrders() {
-  const orders = await db.order.findMany({
-    orderBy: {
-      createdAt: 'desc',
-    }
-  });
-  return orders;
+  // Simulate an async operation
+  await new Promise(resolve => setTimeout(resolve, 50));
+  return mockOrders;
 }
 
 export default async function OrdersPage() {

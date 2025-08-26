@@ -59,7 +59,7 @@ export default function DashboardPage() {
               <CardTitle>Recent Orders</CardTitle>
             </CardHeader>
             <CardContent>
-              <p className="text-muted-foreground">No recent orders to display.</p>
+              <p className="text-muted-foreground">The recent orders will be displayed here once the database is connected.</p>
             </CardContent>
           </Card>
         </div>
