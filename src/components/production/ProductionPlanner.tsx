@@ -37,6 +37,9 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import type { workOrders } from "@/lib/db/schema";
+
+type WorkOrderItem = typeof workOrders.$inferSelect;
 
 type ProductionStatus =
   | "Needs Production"
@@ -44,20 +47,6 @@ type ProductionStatus =
   | "Completed"
   | "Canceled"
   | "Subcontracted";
-
-// This type must match the data structure returned by the /api/work-orders endpoint
-interface WorkOrderItem {
-  id: string;
-  orderId: string;
-  productName: string;
-  productColor: string;
-  productSize: string;
-  designDataUri: string;
-  quantity: number;
-  status: ProductionStatus;
-  createdAt: string; // Dates are serialized as strings
-  isSubcontract: boolean;
-}
 
 const statusVariants: { [key in ProductionStatus]: { variant: "default" | "secondary" | "outline" | "destructive", className: string } } = {
   "Needs Production": { variant: "secondary", className: 'bg-yellow-100 text-yellow-800' },
@@ -82,7 +71,6 @@ export default function ProductionPlanner() {
           throw new Error('Failed to fetch work orders');
         }
         const data: WorkOrderItem[] = await response.json();
-        // The data is pre-sorted by the API
         setWorkOrders(data);
       } catch (error) {
         console.error("Error fetching work orders:", error);
@@ -94,7 +82,7 @@ export default function ProductionPlanner() {
   }, []);
 
 
-  const handleStatusChange = async (itemId: string, newStatus: ProductionStatus) => {
+  const handleStatusChange = async (itemId: number, newStatus: ProductionStatus) => {
     // This needs to be implemented via a server action or a PUT request to an API endpoint
     // For now, we just optimistically update the UI
     console.log(`Updating item ${itemId} to status ${newStatus}`);
@@ -171,11 +159,11 @@ export default function ProductionPlanner() {
                     <TableBody>
                      {workOrders.map((item) => (
                         <TableRow key={item.id}>
-                          <TableCell className="font-medium">WO-#{item.id.substring(0, 7)}</TableCell>
+                          <TableCell className="font-medium">WO-#{item.id}</TableCell>
                           <TableCell>
                              <div className="flex items-center gap-3">
                                 <Image
-                                    src={item.designDataUri}
+                                    src={item.designDataUri!}
                                     alt="Design"
                                     width={40}
                                     height={40}
@@ -193,7 +181,7 @@ export default function ProductionPlanner() {
                           </TableCell>
                           <TableCell>
                             <Select value={item.status} onValueChange={(newStatus) => handleStatusChange(item.id, newStatus as ProductionStatus)}>
-                                <SelectTrigger className={`w-40 text-xs ${statusVariants[item.status].className}`}>
+                                <SelectTrigger className={`w-40 text-xs ${statusVariants[item.status as ProductionStatus].className}`}>
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -267,7 +255,7 @@ export default function ProductionPlanner() {
                   {subcontractingItems.map(item => (
                     <div key={item.id} className="flex items-center justify-between">
                        <div>
-                         <p className="text-sm font-medium">WO-#{item.id.substring(0,7)}</p>
+                         <p className="text-sm font-medium">WO-#{item.id}</p>
                          <p className="text-xs text-muted-foreground">{item.productName} ({item.productColor})</p>
                        </div>
                        <Button size="sm">Create PO</Button>
@@ -286,7 +274,7 @@ export default function ProductionPlanner() {
       <AlertDialog open={isBomOpen} onOpenChange={setBomOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Bill of Materials (BOM) for WO-#{selectedItem?.id.substring(0,7)}</AlertDialogTitle>
+            <AlertDialogTitle>Bill of Materials (BOM) for WO-#{selectedItem?.id}</AlertDialogTitle>
             <AlertDialogDescription>
               A simplified Bill of Materials for this work order.
               {selectedItem?.isSubcontract && <div className="mt-2 p-2 bg-purple-50 border-l-4 border-purple-400 text-purple-700">This item involves a subcontracting process.</div>}

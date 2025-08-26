@@ -84,8 +84,6 @@ export default function DesignStudio() {
      if (!design) return;
      startTransition(async () => {
         const result = await createOrderAction({
-            // For now, we'll use a hardcoded product ID.
-            // In a real app, this would come from the selected product.
             productId: "tshirt-regular", 
             designDataUri: design,
             color: currentColor,
@@ -245,13 +243,6 @@ export default function DesignStudio() {
                     <Loader2 className="h-12 w-12 animate-spin text-primary" />
                   </div>
                 )}
-              </div>
-              <div className="mt-4 flex items-center gap-2">
-              {design && (
-                 <Badge variant="secondary">
-                   Original Design
-                 </Badge>
-               )}
               </div>
             </CardContent>
           </Card>

@@ -6,16 +6,10 @@ import Header from "@/components/layout/Header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
+import type { orders } from "@/lib/db/schema";
 
-// This type should match the structure of the data returned by your API
-// which is based on the Firestore document structure.
-interface Order {
-  id: string;
-  customerName: string | null;
-  createdAt: string; // ISO string from Firestore timestamp
-  status: string;
-  total: number;
-}
+type Order = typeof orders.$inferSelect;
+
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -87,15 +81,15 @@ export default function OrdersPage() {
                 <TableBody>
                   {orders.map((order) => (
                     <TableRow key={order.id}>
-                      <TableCell className="font-medium">#{order.id.substring(0, 7)}</TableCell>
-                      <TableCell>{order.customerName || `Customer #${order.id.substring(0, 5)}`}</TableCell>
+                      <TableCell className="font-medium">#{order.id}</TableCell>
+                      <TableCell>{order.customerName || `Customer #${order.id}`}</TableCell>
                       <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
                       <TableCell>
                         <Badge variant={getStatusVariant(order.status)}>
                           {order.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right">${order.total.toFixed(2)}</TableCell>
+                      <TableCell className="text-right">${Number(order.total).toFixed(2)}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

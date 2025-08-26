@@ -1,8 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import { db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp, doc, setDoc } from "firebase/firestore";
+import { db } from "@/lib/db";
+import { orders, orderItems, workOrders } from "@/lib/db/schema";
 
 const createOrderSchema = z.object({
   productId: z.string(),
@@ -14,15 +14,13 @@ const createOrderSchema = z.object({
 
 type Result = {
   success: boolean;
-  orderId?: string;
+  orderId?: number;
   error?: string;
 };
 
-// A simplified function to determine if an item needs subcontracting
 function needsSubcontracting(color: string, size: string): boolean {
-    return size === "XXL" || color === "Red";
+  return size === "XXL" || color === "Red";
 }
-
 
 export async function createOrderAction(
   values: z.infer<typeof createOrderSchema>
@@ -38,43 +36,47 @@ export async function createOrderAction(
 
   try {
     const { productId, designDataUri, color, size, price } = validatedFields.data;
-    
-    // 1. Create the Order document
-    const orderCollectionRef = collection(db, "orders");
-    const newOrderRef = await addDoc(orderCollectionRef, {
-        customerName: "Demo Customer", // In a real app, this would come from auth
-        status: "Pending",
-        total: price,
-        createdAt: serverTimestamp(),
-        items: [ // Storing items as an array in the order
-            {
-                productId: productId,
-                color: color,
-                size: size,
-                quantity: 1,
-            }
-        ]
-    });
-    
-    console.log("Order created with ID: ", newOrderRef.id);
 
-    // 2. Create the corresponding Work Order document
-    const workOrderCollectionRef = collection(db, "work-orders");
-    await addDoc(workOrderCollectionRef, {
-        orderId: newOrderRef.id,
-        productName: "T-Shirt", // Simplified
+    // Use a transaction to ensure atomicity
+    const result = await db.transaction(async (tx) => {
+      // 1. Create the Order
+      const [newOrder] = await tx
+        .insert(orders)
+        .values({
+          customerName: "Demo Customer",
+          status: "Pending",
+          total: price.toString(),
+        })
+        .returning({ id: orders.id });
+
+      const orderId = newOrder.id;
+
+      // 2. Create the Order Item
+      await tx.insert(orderItems).values({
+        orderId: orderId,
+        productId: productId,
+        color: color,
+        size: size,
+        quantity: 1,
+      });
+
+      // 3. Create the Work Order
+      await tx.insert(workOrders).values({
+        orderId: orderId,
+        productName: "T-Shirt",
         productColor: color,
         productSize: size,
         designDataUri: designDataUri,
-        quantity: 1, // For simplicity, each order is for 1 item
+        quantity: 1,
         status: "Needs Production",
         isSubcontract: needsSubcontracting(color, size),
-        createdAt: serverTimestamp(),
+      });
+
+      return { orderId };
     });
 
-    console.log("Work Order created for order ID: ", newOrderRef.id);
-    
-    return { success: true, orderId: newOrderRef.id };
+    console.log("Order created with ID: ", result.orderId);
+    return { success: true, orderId: result.orderId };
 
   } catch (e) {
     console.error("Error creating order: ", e);

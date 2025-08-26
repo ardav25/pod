@@ -1,30 +1,16 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { db } from '@/lib/db';
+import { orders } from '@/lib/db/schema';
+import { desc } from 'drizzle-orm';
 
-// Define a type for the order data for better type safety
-interface Order {
-  id: string;
-  [key: string]: any; // Allow other fields
-}
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const ordersCollectionRef = collection(db, 'orders');
-    const q = query(ordersCollectionRef, orderBy('createdAt', 'desc'));
-    const querySnapshot = await getDocs(q);
-
-    const orders: Order[] = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      // Firestore timestamps need to be converted to a serializable format (e.g., ISO string)
-      createdAt: doc.data().createdAt?.toDate().toISOString(), 
-    }));
-    
-    return NextResponse.json(orders);
+    const allOrders = await db.select().from(orders).orderBy(desc(orders.createdAt));
+    return NextResponse.json(allOrders);
   } catch (error) {
     console.error('[API_ORDERS_GET]', error);
-    // It's good practice to not expose detailed error messages to the client
     return new NextResponse('Internal Server Error', { status: 500 });
   }
 }

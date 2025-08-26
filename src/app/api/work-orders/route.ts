@@ -1,25 +1,14 @@
 import { NextResponse } from 'next/server';
-import { db } from '@/lib/firebase';
-import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+import { db } from '@/lib/db';
+import { workOrders } from '@/lib/db/schema';
+import { asc } from 'drizzle-orm';
 
-interface WorkOrder {
-  id: string;
-  [key: string]: any;
-}
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const workOrdersCollectionRef = collection(db, 'work-orders');
-    const q = query(workOrdersCollectionRef, orderBy('createdAt', 'asc'));
-    const querySnapshot = await getDocs(q);
-
-    const workOrders: WorkOrder[] = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt?.toDate().toISOString(),
-    }));
-
-    return NextResponse.json(workOrders);
+    const allWorkOrders = await db.select().from(workOrders).orderBy(asc(workOrders.createdAt));
+    return NextResponse.json(allWorkOrders);
   } catch (error) {
     console.error('[API_WORK_ORDERS_GET]', error);
     return new NextResponse('Internal Server Error', { status: 500 });

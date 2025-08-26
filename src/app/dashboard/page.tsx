@@ -5,15 +5,9 @@ import { DollarSign, Package, Palette, Loader2 } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
+import type { orders } from "@/lib/db/schema";
 
-// Assuming a type definition for Order based on your Firestore structure
-interface Order {
-  id: string;
-  customerName: string | null;
-  createdAt: string; // ISO string
-  status: string;
-  total: number;
-}
+type Order = typeof orders.$inferSelect;
 
 interface DashboardStats {
     totalRevenue: number;
@@ -42,7 +36,7 @@ export default function DashboardPage() {
         // Calculate stats
         let totalRevenue = 0;
         allOrders.forEach(order => {
-            totalRevenue += order.total;
+            totalRevenue += Number(order.total);
         });
 
         setStats({
@@ -152,7 +146,7 @@ export default function DashboardPage() {
                   <TableBody>
                     {recentOrders.map((order) => (
                          <TableRow key={order.id}>
-                            <TableCell className="font-medium">#{order.id.substring(0, 7)}</TableCell>
+                            <TableCell className="font-medium">#{order.id}</TableCell>
                             <TableCell>{order.customerName}</TableCell>
                             <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
                             <TableCell>
@@ -160,7 +154,7 @@ export default function DashboardPage() {
                                  {order.status}
                                </Badge>
                             </TableCell>
-                            <TableCell className="text-right">${order.total.toFixed(2)}</TableCell>
+                            <TableCell className="text-right">${Number(order.total).toFixed(2)}</TableCell>
                          </TableRow>
                     ))}
                   </TableBody>
