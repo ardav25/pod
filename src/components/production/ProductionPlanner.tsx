@@ -42,19 +42,19 @@ import {
 const mockProductionItems = [
   {
     id: "wo-001",
-    orderId: "ORD-12346",
-    product: "T-shirt Hitam",
+    orderId: "ord-12346", // From Bob Williams's order
+    product: "T-shirt Custom",
     designId: "des-abc",
     designPreview: "https://picsum.photos/seed/design1/100/100",
-    quantity: 2,
+    quantity: 1,
     size: "L",
     status: "Needs Production",
     subcontract: false,
   },
   {
     id: "wo-002",
-    orderId: "ORD-12346",
-    product: "T-shirt Putih",
+    orderId: "ord-12346", // From Bob Williams's order
+    product: "T-shirt Custom",
     designId: "des-def",
     designPreview: "https://picsum.photos/seed/design2/100/100",
     quantity: 1,
@@ -64,8 +64,8 @@ const mockProductionItems = [
   },
   {
     id: "wo-003",
-    orderId: "ORD-12347",
-    product: "T-shirt Merah",
+    orderId: "ord-12347", // From Charlie Brown's order
+    product: "T-shirt Custom",
     designId: "des-ghi",
     designPreview: "https://picsum.photos/seed/design3/100/100",
     quantity: 1,
@@ -73,49 +73,38 @@ const mockProductionItems = [
     status: "In Progress",
     subcontract: false,
   },
-    {
+  {
     id: "wo-004",
-    orderId: "ORD-12349",
-    product: "T-shirt Hitam",
-    designId: "des-xyz",
-    designPreview: "https://picsum.photos/seed/design6/100/100",
-    quantity: 5,
-    size: "M",
-    status: "Needs Production",
+    orderId: "ord-12345", // From Alice Johnson's order
+    product: "T-shirt Custom",
+    designId: "des-jkl",
+    designPreview: "https://picsum.photos/seed/design4/100/100",
+    quantity: 1,
+    size: "S",
+    status: "Completed",
+    subcontract: false,
+  },
+    {
+    id: "wo-005",
+    orderId: "ord-12348", // From Diana Miller's (canceled) order
+    product: "T-shirt Custom",
+    designId: "des-mno",
+    designPreview: "https://picsum.photos/seed/design5/100/100",
+    quantity: 2,
+    size: "XXL",
+    status: "Canceled",
     subcontract: false,
   },
   {
-    id: "wo-005",
-    orderId: "ORD-12350",
-    product: "Topi Custom Bordir",
+    id: "wo-006",
+    orderId: "ord-12349", // New order not on the list yet
+    product: "Topi Bordir",
     designId: "des-hat1",
     designPreview: "https://picsum.photos/seed/design7/100/100",
     quantity: 10,
     size: "One Size",
     status: "Needs Production",
     subcontract: true,
-  },
-  {
-    id: "wo-006",
-    orderId: "ORD-12345",
-    product: "T-shirt Navy",
-    designId: "des-jkl",
-    designPreview: "https://picsum.photos/seed/design4/100/100",
-    quantity: 3,
-    size: "S",
-    status: "Completed",
-    subcontract: false,
-  },
-  {
-    id: "wo-007",
-    orderId: "ORD-12348",
-    product: "T-shirt Heather Grey",
-    designId: "des-mno",
-    designPreview: "https://picsum.photos/seed/design5/100/100",
-    quantity: 5,
-    size: "XXL",
-    status: "Canceled",
-    subcontract: false,
   },
 ];
 
@@ -160,13 +149,15 @@ export default function ProductionPlanner() {
     );
 
     itemsForProduction.forEach((item) => {
-      if (!requirements[item.product]) {
-        requirements[item.product] = {};
+      // For simplicity, we use the product name as the material key
+      const materialKey = item.product.split(" ")[0] + " Blank"; // e.g. "T-shirt Blank"
+      if (!requirements[materialKey]) {
+        requirements[materialKey] = {};
       }
-      if (!requirements[item.product][item.size]) {
-        requirements[item.product][item.size] = 0;
+      if (!requirements[materialKey][item.size]) {
+        requirements[materialKey][item.size] = 0;
       }
-      requirements[item.product][item.size] += item.quantity;
+      requirements[materialKey][item.size] += item.quantity;
     });
 
     return Object.entries(requirements);
@@ -216,7 +207,7 @@ export default function ProductionPlanner() {
                       <TableRow key={item.id}>
                         <TableCell className="font-medium">
                           {item.id.toUpperCase()}
-                          {item.subcontract && <p className="text-xs text-muted-foreground">Subcontracted</p>}
+                          <p className="text-xs text-muted-foreground">{item.orderId.toUpperCase()}</p>
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-2">
@@ -230,7 +221,7 @@ export default function ProductionPlanner() {
                             />
                             <div>
                               <p className="font-medium">{item.product}</p>
-                              <p className="text-sm text-muted-foreground">{item.orderId}</p>
+                              <p className="text-sm text-muted-foreground">Design: {item.designId}</p>
                             </div>
                           </div>
                         </TableCell>
