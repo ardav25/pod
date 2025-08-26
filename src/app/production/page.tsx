@@ -2,49 +2,15 @@ import Header from "@/components/layout/Header";
 import ProductionPlanner from "@/components/production/ProductionPlanner";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GanttChartSquare, Users, FileText, Package } from "lucide-react";
-import db from "@/lib/db";
-
-async function getProductionStats() {
-    const activeWorkOrders = await db.workOrder.count({
-        where: {
-            OR: [
-                { status: "Needs Production" },
-                { status: "In Progress" },
-            ]
-        }
-    });
-
-    const unitsToProduce = await db.workOrder.aggregate({
-        _sum: {
-            quantity: true,
-        },
-        where: {
-            OR: [
-                { status: "Needs Production" },
-                { status: "In Progress" },
-            ]
-        }
-    });
-
-    const subcontractingJobs = await db.workOrder.count({
-        where: {
-            subcontract: true,
-            status: {
-                notIn: ["Completed", "Canceled"],
-            }
-        }
-    });
-
-    return {
-        activeWorkOrders,
-        unitsToProduce: unitsToProduce._sum.quantity ?? 0,
-        subcontractingJobs,
-    };
-}
 
 
 export default async function ProductionPage() {
-  const stats = await getProductionStats();
+
+  const stats = {
+    activeWorkOrders: 0,
+    unitsToProduce: 0,
+    subcontractingJobs: 0,
+  }
 
   return (
     <div className="flex flex-col w-full">
@@ -104,7 +70,7 @@ export default async function ProductionPage() {
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">3</div>
+              <div className="text-2xl font-bold">0</div>
               <p className="text-xs text-muted-foreground">
                 Available reports to generate
               </p>

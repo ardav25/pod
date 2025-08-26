@@ -3,21 +3,9 @@ import Header from "@/components/layout/Header";
 import { DollarSign, Package, Palette } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
-import db from "@/lib/db";
-
-async function getRecentOrders() {
-    const orders = await db.order.findMany({
-        take: 5,
-        orderBy: {
-            createdAt: 'desc',
-        },
-    });
-    return orders;
-}
 
 export default async function DashboardPage() {
-  const recentOrders = await getRecentOrders();
+  const recentOrders: any[] = [];
 
   return (
     <div className="flex flex-col w-full">
@@ -36,9 +24,9 @@ export default async function DashboardPage() {
               <DollarSign className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">$4,299.30</div>
+              <div className="text-2xl font-bold">$0.00</div>
               <p className="text-xs text-muted-foreground">
-                +20.1% from last month
+                
               </p>
             </CardContent>
           </Card>
@@ -48,9 +36,9 @@ export default async function DashboardPage() {
               <Package className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">+235</div>
+              <div className="text-2xl font-bold">0</div>
               <p className="text-xs text-muted-foreground">
-                +18.1% from last month
+                
               </p>
             </CardContent>
           </Card>
@@ -62,9 +50,9 @@ export default async function DashboardPage() {
               <Palette className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">12</div>
+              <div className="text-2xl font-bold">0</div>
               <p className="text-xs text-muted-foreground">
-                +2 since last week
+                
               </p>
             </CardContent>
           </Card>
@@ -87,29 +75,7 @@ export default async function DashboardPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {recentOrders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-medium">{order.id.substring(0, 7).toUpperCase()}</TableCell>
-                        <TableCell>{order.customer}</TableCell>
-                        <TableCell>{format(order.createdAt, "PPP")}</TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={
-                              order.status === 'Fulfilled' ? 'default' : 
-                              order.status === 'Processing' ? 'secondary' :
-                              order.status === 'Shipped' ? 'outline' :
-                              'destructive'
-                            }
-                            className={
-                              order.status === 'Fulfilled' ? 'bg-green-100 text-green-800 hover:bg-green-200' : ''
-                            }
-                          >
-                            {order.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">${order.total.toFixed(2)}</TableCell>
-                      </TableRow>
-                    ))}
+                    {/* Orders will be mapped here */}
                   </TableBody>
                 </Table>
               ) : (

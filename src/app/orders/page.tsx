@@ -2,20 +2,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import Header from "@/components/layout/Header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
-import db from "@/lib/db";
 
-async function getOrders() {
-  const orders = await db.order.findMany({
-    orderBy: {
-      createdAt: 'desc',
-    }
-  });
-  return orders;
-}
-
-export default async function OrdersPage() {
-  const orders = await getOrders();
+export default function OrdersPage() {
+  
+  const orders: any[] = [];
 
   return (
     <div className="flex flex-col w-full">
@@ -39,29 +29,7 @@ export default async function OrdersPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {orders.map((order) => (
-                    <TableRow key={order.id}>
-                      <TableCell className="font-medium">{order.id.substring(0, 7).toUpperCase()}</TableCell>
-                      <TableCell>{order.customer}</TableCell>
-                      <TableCell>{format(order.createdAt, "PPP")}</TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={
-                            order.status === 'Fulfilled' ? 'default' : 
-                            order.status === 'Processing' ? 'secondary' :
-                            order.status === 'Shipped' ? 'outline' :
-                            'destructive'
-                          }
-                          className={
-                            order.status === 'Fulfilled' ? 'bg-green-100 text-green-800 hover:bg-green-200' : ''
-                          }
-                        >
-                          {order.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">${order.total.toFixed(2)}</TableCell>
-                    </TableRow>
-                  ))}
+                  {/* Data will be mapped here */}
                 </TableBody>
               </Table>
             ) : (
