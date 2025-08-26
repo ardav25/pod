@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useTransition, useCallback } from "react";
+import React, { useState, useRef, useTransition } from "react";
 import Image from "next/image";
 import {
   Card,
@@ -22,21 +22,15 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
-import { enhanceDesignAction } from "@/app/actions/enhance-design-action";
 import { createOrderAction } from "@/app/actions/create-order-action";
 import {
   Upload,
   Palette,
   Ruler,
-  Sparkles,
   Loader2,
-  AlertCircle,
   CheckCircle,
-  Info,
-  Wand2,
 } from "lucide-react";
 import { Badge } from "../ui/badge";
-import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -47,7 +41,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Textarea } from "../ui/textarea";
 import { useRouter } from "next/navigation";
 
 const colors = ["White", "Black", "Navy", "Heather Grey", "Red"];
@@ -57,12 +50,8 @@ const finalPrice = 18.49;
 export default function DesignStudio() {
   const [design, setDesign] = useState<string | null>(null);
   const [displayedDesign, setDisplayedDesign] = useState<string | null>(null);
-  const [enhancedDesign, setEnhancedDesign] = useState<string | null>(null);
-  const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isCheckoutOpen, setCheckoutOpen] = useState(false);
-  const [customPrompt, setCustomPrompt] = useState("");
   const [currentColor, setCurrentColor] = useState("White");
   const [currentSize, setCurrentSize] = useState("M");
 
@@ -86,64 +75,9 @@ export default function DesignStudio() {
         const result = reader.result as string;
         setDesign(result);
         setDisplayedDesign(result);
-        setEnhancedDesign(null);
-        setAiSuggestions([]);
-        setError(null);
-        setCustomPrompt("");
       };
       reader.readAsDataURL(file);
     }
-  };
-
-  const handleEnhanceDesign = useCallback((prompt?: string) => {
-    if (!design) {
-      toast({
-        title: "No design uploaded",
-        description: "Please upload a design first.",
-        variant: "destructive",
-      });
-      return;
-    }
-    startTransition(() => {
-      setError(null);
-      enhanceDesignAction({ designDataUri: design, prompt }).then((result) => {
-        if (result.success && result.data) {
-          setEnhancedDesign(result.data.enhancedDesignDataUri);
-          setDisplayedDesign(result.data.enhancedDesignDataUri);
-          setAiSuggestions(result.data.suggestions);
-          toast({
-            title: "Design Enhanced",
-            description: "Your design has been successfully enhanced by AI.",
-          });
-        } else {
-          setError(result.error || "An unknown error occurred.");
-          setDisplayedDesign(design); // Revert to original on error
-          toast({
-            title: "Enhancement Failed",
-            description: result.error || "Could not enhance the design.",
-            variant: "destructive",
-          });
-        }
-      });
-    });
-  }, [design, toast]);
-
-
-  const handleSuggestionClick = (suggestion: string) => {
-    setCustomPrompt(suggestion);
-    handleEnhanceDesign(suggestion);
-  };
-  
-  const handleCustomPromptEnhance = () => {
-    if (!customPrompt) {
-      toast({
-        title: "Empty Prompt",
-        description: "Please enter a prompt to enhance your design.",
-        variant: "destructive",
-      });
-      return;
-    }
-    handleEnhanceDesign(customPrompt);
   };
 
   const handleCheckout = () => {
@@ -153,7 +87,7 @@ export default function DesignStudio() {
             // For now, we'll use a hardcoded product ID.
             // In a real app, this would come from the selected product.
             productId: "tshirt-regular", 
-            designDataUri: enhancedDesign || design,
+            designDataUri: design,
             color: currentColor,
             size: currentSize,
             price: finalPrice,
@@ -265,78 +199,6 @@ export default function DesignStudio() {
                 </Select>
               </div>
             </div>
-
-            <Separator />
-
-            <div className="space-y-4">
-              <h3 className="font-semibold text-md">AI Enhancement</h3>
-               <Button
-                onClick={() => handleEnhanceDesign()}
-                disabled={isPending || !design}
-                className="w-full bg-accent hover:bg-accent/90"
-              >
-                {isPending && !aiSuggestions.length ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="mr-2 h-4 w-4" />
-                )}
-                Enhance Quality (AI)
-              </Button>
-
-              {error && (
-                <Alert variant="destructive">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Error</AlertTitle>
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
-              
-               <div className="space-y-2">
-                  <Label htmlFor="custom-prompt">Or, try your own custom prompt:</Label>
-                  <Textarea
-                    id="custom-prompt"
-                    placeholder="e.g., 'make it look like a 90s cartoon'"
-                    value={customPrompt}
-                    onChange={(e) => setCustomPrompt(e.target.value)}
-                    disabled={isPending || !design}
-                  />
-                  <Button onClick={handleCustomPromptEnhance} disabled={isPending || !design || !customPrompt} className="w-full">
-                    Enhance with Prompt
-                  </Button>
-                </div>
-
-              {isPending && !aiSuggestions.length && (
-                <div className="flex items-center space-x-2 p-4 rounded-md bg-muted/50">
-                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
-                  <span className="text-muted-foreground text-sm">AI is thinking... This may take a moment.</span>
-                </div>
-              )}
-
-              {!isPending && aiSuggestions.length > 0 && (
-                <Alert>
-                  <Info className="h-4 w-4" />
-                  <AlertTitle>AI Enhancement Suggestions</AlertTitle>
-                  <AlertDescription>
-                    <p className="mb-3">Click a suggestion below to apply it:</p>
-                    <div className="flex flex-col space-y-2">
-                      {aiSuggestions.map((suggestion, index) => (
-                        <Button
-                          key={index}
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleSuggestionClick(suggestion)}
-                          className="text-left justify-start h-auto whitespace-normal"
-                          disabled={isPending}
-                        >
-                          <Wand2 className="mr-2 h-4 w-4 flex-shrink-0" />
-                          {suggestion}
-                        </Button>
-                      ))}
-                    </div>
-                  </AlertDescription>
-                </Alert>
-              )}
-            </div>
           </CardContent>
           <CardFooter className="flex-col items-start space-y-4">
             <Separator />
@@ -385,12 +247,7 @@ export default function DesignStudio() {
                 )}
               </div>
               <div className="mt-4 flex items-center gap-2">
-              {enhancedDesign ? (
-                <Badge className="bg-green-100 text-green-800 border-green-300 hover:bg-green-200 dark:bg-green-900/50 dark:text-green-200 dark:border-green-700">
-                  <CheckCircle className="h-4 w-4 mr-1"/>
-                  AI Enhanced
-                </Badge>
-              ) : design && (
+              {design && (
                  <Badge variant="secondary">
                    Original Design
                  </Badge>
