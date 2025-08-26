@@ -58,7 +58,7 @@ const suggestionsPrompt = ai.definePrompt({
         ),
     }),
   },
-  prompt: `You are an expert print-on-demand design critic. Analyze the following design and provide 3-5 concise, actionable suggestions for how to improve it for a t-shirt print.
+  prompt: `You are an expert print-on-demand design critic. Analyze the following design and provide 3-5 concise, actionable suggestions for how to improve it for a t-shirt print. The suggestions should be phrased as instructions for an AI image generation model.
 
 Design: {{media url=designDataUri}}`,
 });
@@ -81,7 +81,7 @@ const enhanceDesignFlow = ai.defineFlow(
       {
         text:
           input.prompt ||
-          'Subtly enhance this image for a high-quality t-shirt print. Improve resolution and color vibrancy, but keep the core design elements the same. Do not add new elements unless asked.',
+          'Enhance this image for a high-quality t-shirt print. Increase resolution to 300 DPI, ensure clean lines, and make colors vibrant for direct-to-garment printing. Keep the original art style and subject matter. Do not add any new elements unless specifically asked. The output should be a clean image with a transparent background.',
       },
     ];
 
