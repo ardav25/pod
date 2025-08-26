@@ -221,7 +221,7 @@ export default function ProductionPlanner() {
               <CardDescription>
                 Auto-calculated for items in "Needs Production".
               </CardDescription>
-            </Header>
+            </CardHeader>
             <CardContent>
                {materialRequirements.length > 0 ? (
                 <div className="space-y-4">
@@ -248,7 +248,7 @@ export default function ProductionPlanner() {
                <CardDescription>
                 Manage orders sent to external vendors.
               </CardDescription>
-            </Header>
+            </CardHeader>
             <CardContent>
                {subcontractingItems.length > 0 ? (
                 <div className="space-y-4">
