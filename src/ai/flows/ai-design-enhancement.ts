@@ -74,23 +74,18 @@ const enhanceDesignFlow = ai.defineFlow(
     const suggestionPromise = suggestionsPrompt({
       designDataUri: input.designDataUri,
     });
-
-    // 2. Generate the enhanced image
-    const imageEnhancementPrompt = [
-      {media: {url: input.designDataUri}},
-      {
-        text:
-          input.prompt ||
-          'Enhance this image for a high-quality t-shirt print. Increase resolution to 300 DPI, ensure clean lines, and make colors vibrant for direct-to-garment printing. Keep the original art style and subject matter. Do not add any new elements unless specifically asked. The output MUST be a clean image with a transparent background.',
-      },
-    ];
+    
+    // 2. Build the image enhancement prompt
+    const imageEnhancementPrompt =
+      input.prompt ||
+      'Upscale this image to a high resolution suitable for a t-shirt print. Enhance the colors to be vibrant for printing. The output must be a clean image with a transparent background.';
 
     const imagePromise = ai.generate({
-      model: 'googleai/gemini-2.0-flash-preview-image-generation',
+      model: 'googleai/imagen-4.0-fast-generate-001',
       prompt: imageEnhancementPrompt,
-      config: {
-        responseModalities: ['TEXT', 'IMAGE'],
-      },
+      input: [
+         {media: {url: input.designDataUri}},
+      ]
     });
 
     // Await both promises in parallel
