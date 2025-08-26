@@ -1,7 +1,8 @@
 "use server";
 
 import { z } from "zod";
-import db from "@/lib/db";
+import { db } from "@/lib/firebase";
+import { collection, addDoc, serverTimestamp, doc, setDoc } from "firebase/firestore";
 
 const createOrderSchema = z.object({
   productId: z.string(),
@@ -19,7 +20,6 @@ type Result = {
 
 // A simplified function to determine if an item needs subcontracting
 function needsSubcontracting(color: string, size: string): boolean {
-    // Example logic: All XXL shirts or special colors are subcontracted
     return size === "XXL" || color === "Red";
 }
 
@@ -39,51 +39,42 @@ export async function createOrderAction(
   try {
     const { productId, designDataUri, color, size, price } = validatedFields.data;
     
-    // Using a transaction to ensure both order and work order are created
-    const newOrder = await db.$transaction(async (prisma) => {
-        // 1. Create the Order document
-        const order = await prisma.order.create({
-            data: {
-                customerName: "Demo Customer", // In a real app, this would come from auth
-                status: "Pending",
-                total: price,
-                items: {
-                    create: {
-                        productId: productId,
-                        color: color,
-                        size: size,
-                        quantity: 1,
-                    }
-                }
-            },
-            include: {
-                items: true,
+    // 1. Create the Order document
+    const orderCollectionRef = collection(db, "orders");
+    const newOrderRef = await addDoc(orderCollectionRef, {
+        customerName: "Demo Customer", // In a real app, this would come from auth
+        status: "Pending",
+        total: price,
+        createdAt: serverTimestamp(),
+        items: [ // Storing items as an array in the order
+            {
+                productId: productId,
+                color: color,
+                size: size,
+                quantity: 1,
             }
-        });
+        ]
+    });
+    
+    console.log("Order created with ID: ", newOrderRef.id);
 
-        console.log("Order created with ID: ", order.id);
-
-        // 2. Create the corresponding Work Order document
-        const workOrder = await prisma.workOrder.create({
-            data: {
-                orderId: order.id,
-                productName: "T-Shirt",
-                productColor: color,
-                productSize: size,
-                designDataUri: designDataUri,
-                quantity: 1, // For simplicity, each order is for 1 item
-                status: "Needs Production",
-                isSubcontract: needsSubcontracting(color, size),
-            }
-        });
-
-        console.log("Work Order created with ID: ", workOrder.id);
-        
-        return order;
+    // 2. Create the corresponding Work Order document
+    const workOrderCollectionRef = collection(db, "work-orders");
+    await addDoc(workOrderCollectionRef, {
+        orderId: newOrderRef.id,
+        productName: "T-Shirt", // Simplified
+        productColor: color,
+        productSize: size,
+        designDataUri: designDataUri,
+        quantity: 1, // For simplicity, each order is for 1 item
+        status: "Needs Production",
+        isSubcontract: needsSubcontracting(color, size),
+        createdAt: serverTimestamp(),
     });
 
-
-    return { success: true, orderId: newOrder.id };
+    console.log("Work Order created for order ID: ", newOrderRef.id);
+    
+    return { success: true, orderId: newOrderRef.id };
 
   } catch (e) {
     console.error("Error creating order: ", e);

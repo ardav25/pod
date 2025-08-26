@@ -8,11 +8,11 @@ import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
 
 // This type should match the structure of the data returned by your API
-// and align with the Prisma Order model.
+// which is based on the Firestore document structure.
 interface Order {
   id: string;
   customerName: string | null;
-  createdAt: string; // Dates are often serialized as strings in JSON
+  createdAt: string; // ISO string from Firestore timestamp
   status: string;
   total: number;
 }
@@ -66,7 +66,7 @@ export default function OrdersPage() {
         <Card>
           <CardHeader>
             <CardTitle>Orders</CardTitle>
-            <CardDescription>A list of all customer orders.</CardDescription>
+            <CardDescription>A list of all customer orders from the database.</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (

@@ -37,7 +37,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import db from "@/lib/db"; // Assuming this will be used for status updates eventually via server actions
 
 type ProductionStatus =
   | "Needs Production"
@@ -83,8 +82,7 @@ export default function ProductionPlanner() {
           throw new Error('Failed to fetch work orders');
         }
         const data: WorkOrderItem[] = await response.json();
-        // Sort by creation date, descending
-        data.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        // The data is pre-sorted by the API
         setWorkOrders(data);
       } catch (error) {
         console.error("Error fetching work orders:", error);
@@ -97,11 +95,10 @@ export default function ProductionPlanner() {
 
 
   const handleStatusChange = async (itemId: string, newStatus: ProductionStatus) => {
-    // This needs to be implemented, likely via a server action or a PUT request to an API endpoint
+    // This needs to be implemented via a server action or a PUT request to an API endpoint
+    // For now, we just optimistically update the UI
     console.log(`Updating item ${itemId} to status ${newStatus}`);
-    // Optimistically update the UI
     setWorkOrders(workOrders.map(wo => wo.id === itemId ? { ...wo, status: newStatus } : wo));
-    // Example: await updateWorkOrderStatus(itemId, newStatus);
   };
 
   const handleViewBom = (item: WorkOrderItem) => {

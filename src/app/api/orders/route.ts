@@ -1,13 +1,26 @@
 import { NextResponse } from 'next/server';
-import db from '@/lib/db';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, orderBy, query } from 'firebase/firestore';
+
+// Define a type for the order data for better type safety
+interface Order {
+  id: string;
+  [key: string]: any; // Allow other fields
+}
 
 export async function GET() {
   try {
-    const orders = await db.order.findMany({
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    const ordersCollectionRef = collection(db, 'orders');
+    const q = query(ordersCollectionRef, orderBy('createdAt', 'desc'));
+    const querySnapshot = await getDocs(q);
+
+    const orders: Order[] = querySnapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+      // Firestore timestamps need to be converted to a serializable format (e.g., ISO string)
+      createdAt: doc.data().createdAt?.toDate().toISOString(), 
+    }));
+    
     return NextResponse.json(orders);
   } catch (error) {
     console.error('[API_ORDERS_GET]', error);

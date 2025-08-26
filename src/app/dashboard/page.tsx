@@ -6,11 +6,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { useEffect, useState } from "react";
 
-// Assuming a type definition for Order based on your Prisma schema
+// Assuming a type definition for Order based on your Firestore structure
 interface Order {
   id: string;
   customerName: string | null;
-  createdAt: Date;
+  createdAt: string; // ISO string
   status: string;
   total: number;
 }
@@ -30,27 +30,24 @@ export default function DashboardPage() {
     async function fetchData() {
       setIsLoading(true);
       try {
-        // In a real app, you might have separate API endpoints for stats and recent orders.
-        // Here, we fetch all orders and process them on the client.
         const response = await fetch('/api/orders');
         if (!response.ok) {
           throw new Error('Failed to fetch data');
         }
         const allOrders: Order[] = await response.json();
 
-        // Sort by date and take the last 5 for "Recent Orders"
-        const sortedOrders = allOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setRecentOrders(sortedOrders.slice(0, 5));
+        // Data is already sorted by date from the API
+        setRecentOrders(allOrders.slice(0, 5));
 
         // Calculate stats
         let totalRevenue = 0;
-        sortedOrders.forEach(order => {
+        allOrders.forEach(order => {
             totalRevenue += order.total;
         });
 
         setStats({
             totalRevenue: totalRevenue,
-            orderCount: sortedOrders.length,
+            orderCount: allOrders.length,
             designCount: 0, // Placeholder
         });
 
